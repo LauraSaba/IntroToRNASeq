@@ -1,12 +1,23 @@
-Example RNA-Seq Program for Paired-End RNA
-========================================================
+---
+title: "Example RNA-Seq Program for Paired-End RNA"
+author: "Laura Saba"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    toc_collapsed: false
+    fig_caption: yes
+    fig_retina: 1 
+    code_folding: hide
+---
 
-Put sample details here.
+The goal of this program is to provide a general frame work for a typical bulk RNA-Seq analysis.
 
-###Project Folder Set-Up
+## Project Folder Set-Up
 It is easiest to follow along with this guide, if you set up a project folder that contains the following subfolders:  
 
-* rawReads - should contain the original fastq files
+* raw_reads - should contain the original fastq files
 * trimmedReads
 * alignedReads
 * data
@@ -14,53 +25,68 @@ It is easiest to follow along with this guide, if you set up a project folder th
 * quantitation
 
 
-1. Unzip Files 
----------------
+## Step 1 - Examine raw reads 
+
+For this example we are going to use six libraries available through SRA.
 
 ```
-/projectFolder/code/unzip.sh &
+cd ~/Documents/IntroToRNASeq/raw_reads
+ 
+# wild type samples
+fastq-dump -I --split-files SRR12389348
+fastq-dump -I --split-files SRR12389349
+fastq-dump -I --split-files SRR12389350
+
+# homozygous knockouts
+fastq-dump -I --split-files SRR12389354
+fastq-dump -I --split-files SRR12389355
+fastq-dump -I --split-files SRR12389356
 ```
 
-2. Determine number of reads sent for each sample
--------------------------------------------------
+
+Most of the programs to follow can be used with zipped files, but for demonstration purposes, we use unzipped files in the remainder of the steps.
+
+### Determine number of reads and length of reads sent for each sample
 
 For this program, you want to make double check the header on the fastq file.  For my example code, my fastq file entry looks like this.
 
 ```
-@GWZHISEQ02:301:C97NKANXX:3:1101:1486:1895 1:N:0:CGGCTATG
-NTCCGGTCTGAACTCAGATCACGTAGGACTTTAATCGTTGAACAAACGAACCATTAATAGCNTCTGCACCATTGGGATGTCCTGATCCAACAGATCGGAAG
-+
-#<<BB/BFFFFFFFFFFFFFFFBFFFFFF<BBBF/FB<BFFFFFFFFFFFFF/<<FF<<<F#/<<<FFFFFF/FF<FBF/</F/FBFFFFFFBF/F/7BF/
+@SRR12389348.1.1 1 length=101
+NGCCGTCTTGCAGCGATACTGACTGAATGACTGGAACTGGTAGATGAANTCATCGATGATGNCCCAGAGCCACGGGTTGGGGAGCTCAAGGGGAGCAGGTC
++SRR12389348.1.1 1 length=101
+#<<<<FBFBFFFFFFFBFFFFF/<FF</FFF/<FBBF<B<FFFF/<<B#<<<<<<FB/FFF#<<FBFFFFFFF//<FFFFB/B<//<BFFFF///<BB/7<
 ```
 
-The header row starts with @GWZHISEQ.  In the program that counts reads, it looks for this header row to indicate a new read.
+The header row starts with @SRR.  In the program that counts reads, it looks for this header row to indicate a new read.
 
 This is the code in countRawReads.sh
+
 ```
 #!/bin/bash
-FILES1=/projectFolder/rawReads/*.fastq
+FILES1=/projectFolder/raw_reads/*.fastq
 for f in $FILES1
 do
-	awk '/@GWZHISEQ/ {getline; print length($0)}' $f | awk -v sample="$f" '{sum+=$1} END {print sample,sum/NR,NR}' >> /projectFolder/data/rawReadCounts.txt
+	awk '/@SRR/ {getline; print length($0)}' $f | awk -v sample="$f" '{sum+=$1} END {print sample,sum/NR,NR}' >> /projectFolder/data/rawReadCounts.txt
 done
 ```
 
-You will have to change 'projectFolder' to the pathway to the project folder that you set up initially.  The '@GWZHISEQ' should be changed to the appropriate indicator for the header.  The core here on campus uses '@HISEQ', but it is worth checking the first few lines of one of you files to double check.
+You will have to change 'projectFolder' to the pathway to the project folder that you set up initially.  The '@SRR' should be changed to the appropriate indicator for the header.  
 
 ```
-~/Documents/IntroToRNASeq/code/countRawReads.tmp.sh
+cd ~/Documents/IntroToRNASeq/code
+./countRawReads.sh
 ```
 
 The R code below reads in the txt file generated when counting reads per sample.  Much of it will have to be changed to get the data to look 'pretty' for your particular samples.
 
 ```{r,echo=TRUE,eval=TRUE}
 rm(list=ls())
-options(stringsAsFactors=FALSE)
+
 library(knitr)
 
 projectFolder <- "~/Documents/IntroToRNASeq/"
 
-rawCounts = read.table(file=paste(projectFolder,"data/rawReadCounts.txt",sep=""),sep=" ",header=FALSE,fill=TRUE)
+rawCounts = read.table(file=paste0(projectFolder,"data/rawReadCounts.txt"),sep=" ",header=FALSE,fill=TRUE)
 
 rawCounts$readFrag = as.numeric(rawCounts$V3)
 rawCounts$file = unlist(lapply(strsplit(rawCounts$V1,split="/",fixed=TRUE),function(a) a[length(a)]))
@@ -75,67 +101,60 @@ forPrint = readFragments[,c("sample","numPairedReads","numReadFragments")]
 colnames(forPrint) = c("sample","Number of Paired-End Reads","Number of Read Fragments")
 ```
 
-Raw Reads/Read Fragments
----------------------------
+### Raw Reads/Read Fragments
 
-```{r, results='asis',echo=TRUE,eval=TRUE}
+```{r, results='asis',echo=TRUE,eval=FALSE}
 kable(forPrint,align=rep("c",ncol(readFragments)))
 ```
 
-Total Number of Paired End Reads: `r prettyNum(sum(rawCounts$readFrag)/2,big.mark=",",scientific=FALSE)`  
-Total Number of Read Fragments:  `r prettyNum(sum(rawCounts$readFrag),big.mark=",",scientific=FALSE)`  
-Average Number of Paired End Reads Per Sample: `r prettyNum(sum(rawCounts$readFrag)/nrow(rawCounts),big.mark=",",scientific=FALSE)`  
+Total Number of Paired End Reads: ` prettyNum(sum(rawCounts$readFrag)/2,big.mark=",",scientific=FALSE)`  
+Total Number of Read Fragments:  ` prettyNum(sum(rawCounts$readFrag),big.mark=",",scientific=FALSE)`  
+Average Number of Paired End Reads Per Sample: ` prettyNum(sum(rawCounts$readFrag)/nrow(rawCounts),big.mark=",",scientific=FALSE) 
 
-3. Trim reads for adaptors and for quality
----------------
+## Step 2 - Trim reads for adaptors and for quality
+
 ```
-/Users/sabal/Documents/SabaLab/examplePrograms/RNASeq/pairedEnd.polyA/trimReads.sh &
+~/Documents/IntroToRNASeq/code/trimReads.sh &
 ```
 
 Here is what that program contains:
 ```
-FILES1=/projectFolder/rawReads/*R1*.fastq
+FILES1=/projectFolder/raw_reads/*_1*.fastq
 for f in $FILES1
 do
-	f2=${f//R1/R2} 
+	f2=${f//_1/_2} 
 	f_trimmed=${f//.fastq/_trimmed.fastq}
-	f_trimmed=${f_trimmed//rawReads/trimmedReads}
+	f_trimmed=${f_trimmed//raw_reads/trimmed_reads}
 	f2_trimmed=${f2//.fastq/_trimmed.fastq}
-	f2_trimmed=${f2_trimmed//rawReads/trimmedReads}
+	f2_trimmed=${f2_trimmed//raw_reads/trimmed_reads}
 	cutadapt -q 20 -m 20 -a AGATCGGAAGAGCACACGTCTGAACTCCAGTCACCCGTCCCGATCTCGTATGCCGTCTTCTGCTTG -A AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGTAGATCTCGGTGGTCGCCGTATCATT -o $f_trimmed -p $f2_trimmed $f $f2
 done
 ```
 
-
-Here is the code to do a single sample
-```
-cutadapt -q 20 -m 20 -a AGATCGGAAGAGCACACGTCTGAACTCCAGTCACCCGTCCCGATCTCGTATGCCGTCTTCTGCTTG -A AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGTAGATCTCGGTGGTCGCCGTATCATT -o ~/Documents/IntroToRNASeq/trimmedReads/WT_5_CGGCTATG_L003_R1_001_trimmed.fastq -p ~/Documents/IntroToRNASeq/trimmedReads/WT_5_CGGCTATG_L003_R2_001_trimmed.fastq ~/Documents/IntroToRNASeq/rawReads/WT_5_CGGCTATG_L003_R1_001.fastq ~/Documents/IntroToRNASeq/rawReads/WT_5_CGGCTATG_L003_R2_001.fastq
-```
 Again, you will have to put in the path to the raw data files.
 
-4. Characterize Trimmed Reads
----------------
+### Characterize Trimmed Reads
 
 The code for counting trimmed reads is very similar to the counting raw reads.
 
 ```
-/projectFolder/code/countTrimmedReads.sh &
+~/Documents/IntroToRNASeq/code/countTrimmedReads.sh &
 ```
 
 Here is what the .sh file contains.
 
 ```
 #!/bin/bash
-FILES1=/projectFolder/trimmedReads/*.fq
+FILES1=/projectFolder/trimmed_reads/*.fastq
 for f in $FILES1
 do
-	awk '/@HWI/ {getline; print length($0)}' $f | awk -v sample="$f" '{sum+=$1} END {print sample,sum/NR,NR}' >> /projectFolder/data/trimmedReadCounts.txt
+	awk '/@SRR/ {getline; print length($0)}' $f | awk -v sample="$f" '{sum+=$1} END {print sample,sum/NR,NR}' >> /projectFolder/data/trimmedReadCounts.txt
 done
 ```
 
 This R code just makes the txt file generated easier to read and adds the information on the raw reads.
-```{r,echo=TRUE,eval=TRUE}
-options(stringsAsFactors=FALSE)
+
+```{r,echo=TRUE,eval=FALSE}
 
 trimmed = read.table(file=paste(projectFolder,"data/trimmedReadCounts.txt",sep=""),sep="",header=FALSE)
 trimmed$file = unlist(lapply(strsplit(trimmed$V1,split="/",fixed=TRUE),function(a) a[length(a)]))
@@ -158,60 +177,60 @@ forPrint2$numReadFrag = prettyNum(forPrint2$numReadFrag,big.mark=",")
 colnames(forPrint2) = c("sample","Number of Paired-End Reads","Number of Read Fragments","Average Read Fragment Length After Trimming (first read fragment)","Average Read Fragment Length After Trimming (second read fragment)","Number of Read Fragments After Trimming","Percent of Read Fragments That Remained After Trimming")
 ```
 
-Trimmed Reads/Read Fragments
----------------------------
+### Trimmed Reads/Read Fragments
 
-```{r, results='asis',echo=TRUE,eval=TRUE}
+```{r, results='asis',echo=TRUE,eval=FALSE}
 kable(forPrint2,align=rep("c",ncol(forPrint2)))
 ```
 
+```{r, eval=FALSE}
 Total Number of Paired End Reads After Trimming: `r prettyNum(sum(bySample$numReads),big.mark=",",scientific=FALSE)`  
 Total Number of Read Fragments After Trimming:  `r prettyNum(sum(bySample$numReadFrag),big.mark=",",scientific=FALSE)`  
 Average Number of Paired End Reads Per Sample After Trimming: `r prettyNum(mean(bySample$numReads),big.mark=",",scientific=FALSE)`  
+```
 
 
-5.  Align trimmed reads to genome
----------------------
+## Step 3 - Align trimmed reads to genome
 
 First, you need to download the most recent version of the genome from Ensembl, e.g., 
-ftp://ftp.ensembl.org/pub/release-87/fasta/rattus_norvegicus/dna/Rattus_norvegicus.Rnor_6.0.dna.toplevel.fa.gz
+ftp://ftp.ensembl.org/pub/pub/release-105/fasta/rattus_norvegicus/dna/Rattus_norvegicus.mRatBN7.2.dna.toplevel.fa.gz
 
-Second, build the HISAT2 index for genome. **Do not run due to time**
+Second, build the HISAT2 index for genome. 
+
 ```
-hisat2-build ~/Documents/index/Rattus_norvegicus.Rnor_6.0.dna.toplevel.fa ~/Documents/index/rn6_hisat2
+hisat2-build ~/Documents/IntroToRNASeq/index/Rattus_norvegicus.mRatBN7.2.dna.toplevel.fa ~/Documents/IntroToRNASeq/index/rn7_hisat2
 ```
 
 Third, align trimmed reads to genome.
 ```
-hisat2 --rna-strandness RF --dta -p 8 -x ~/Documents/index/rn6_hisat2 -1 ~/Documents/IntroToRNASeq/trimmedReads/WT_5_CGGCTATG_L003_R1_001_trimmed.fastq -2 ~/Documents/IntroToRNASeq/trimmedReads/WT_5_CGGCTATG_L003_R2_001_trimmed.fastq | samtools view -bS - > ~/Documents/IntroToRNASeq/alignedReads/WT5.bam 
+hisat2 --rna-strandness RF --dta -p 8 -x ~/Documents/IntroToRNASeq/index/rn7_hisat2 -1 ~/Documents/IntroToRNASeq/trimmed_reads/SRR12389348_1_trimmed.fastq -2 ~/Documents/IntroToRNASeq/trimmed_reads/SRR12389348_2_trimmed.fastq | samtools view -bS - > ~/Documents/IntroToRNASeq/aligned_reads/WT1.bam 
 ```
 
+## Step 4 - Transcriptome Reconstruction
 
-6. Prepare reads for transcriptome assembly
----------
-
-**Do not execute this step because of time/space constraints**
+### Prepare reads for transcriptome assembly
 
 If you want to merge samples within a group prior to transcriptome assembly with StringTie, BAM files need to be sorted and then merged.
 
 Below is some example code:
 ```
+cd ~/Documents/IntroToRNASeq/aligned_reads/
+
 ## sort each file separately
-samtools sort /data/hi-seq/LRAP.KO/alignedReads/HISAT2/KO1.naive.bam /data/hi-seq/LRAP.KO/alignedReads/HISAT2/KO1.naive.sorted
-samtools sort /data/hi-seq/LRAP.KO/alignedReads/HISAT2/KO2.naive.bam /data/hi-seq/LRAP.KO/alignedReads/HISAT2/KO2.naive.sorted
-samtools sort /data/hi-seq/LRAP.KO/alignedReads/HISAT2/KO3.naive.bam /data/hi-seq/LRAP.KO/alignedReads/HISAT2/KO3.naive.sorted
+samtools sort SRR12389348.bam -o SRR12389348.sorted
+samtools sort SRR12389349.bam -o SRR12389349.sorted
+samtools sort SRR12389350.bam -o SRR12389350.sorted
 
 ## merge three files into one bam
-samtools merge /data/hi-seq/LRAP.KO/alignedReads/HISAT2/KO.naive.bam /data/hi-seq/LRAP.KO/alignedReads/HISAT2/KO1.naive.sorted.bam /data/hi-seq/LRAP.KO/alignedReads/HISAT2/KO2.naive.sorted.bam /data/hi-seq/LRAP.KO/alignedReads/HISAT2/KO3.naive.sorted.bam
+samtools merge WT.bam SRR12389348.sorted.bam SRR12389349.sorted.bam SRR12389350.sorted.bam 
 ```
 
-7. De novo transcriptome assembly with StringTie
-------------
+### De novo transcriptome assembly with StringTie
 
 **Do not execute this step because of time/space constraints**
 
 Download the GTF file of Ensembl transcripts to 'guide' the assembly.
-ftp://ftp.ensembl.org/pub/current_gtf/rattus_norvegicus/Rattus_norvegicus.Rnor_6.0.87.gtf
+http://ftp.ensembl.org/pub/release-105/gtf/rattus_norvegicus/Rattus_norvegicus.mRatBN7.2.105.gtf.gz   
 
 Create group-specific transcriptome assembly:
 ```
@@ -231,8 +250,7 @@ Compare the reconstructed transcriptome to the Ensembl transcriptome
 gffcompare -r ~/Documents/index/Rattus_norvegicus.Rnor_6.0.87.gtf -G -o /data/home/sabal/lncRNA.KO/RNA-Seq/reconstruction/lncKO_merged_wEnsembl /data/home/sabal/lncRNA.KO/RNA-Seq/reconstruction/lncKO_KO_Recon.gtf
 ```
 
-8.  Quantitate Merged De Novo Transcriptome Assembly
-----------------------------
+## Step 5 - Quantitate Merged De Novo Transcriptome Assembly
 
 **Do not execute this step because of time/space constraints**
 
@@ -241,19 +259,21 @@ Prepare RSEM reference using new GTF file and genome sequence
 rsem-prepare-reference --gtf /data/home/sabal/lncRNA.KO/RNA-Seq/reconstruction/lncKO_merged_Recon.gtf --bowtie2 ~/Documents/index/BNLx.rn6.spikes.fa /data/home/sabal/lncRNA.KO/RNA-Seq/reconstruction/lncKO_merged_Recon.hisat 
 ```
 
+```
+rsem-prepare-reference --gtf ~/Documents/IntroToRNASeq/index/Rattus_norvegicus.mRatBN7.2.105.gtf --bowtie2 ~/Documents/IntroToRNASeq/index/Rattus_norvegicus.mRatBN7.2.dna.toplevel.fa ~/Documents/IntroToRNASeq/index/ensembl_rsem 
+```
+
 Run RSEM for each sample (starting with trimmed reads), e.g.:
 ```
 rsem-calculate-expression -p 8 --time --seed 978 --bowtie2 --forward-prob=0.0 --no-bam-output --seed-length 20 --paired-end ~/Documents/IntroToRNASeq/trimmedReads/WT_5_CGGCTATG_L003_R1_001_trimmed.fastq ~/Documents/IntroToRNASeq/trimmedReads/WT_5_CGGCTATG_L003_R2_001_trimmed.fastq /data/home/sabal/lncRNA.KO/RNA-Seq/reconstruction/lncKO_merged_Recon.hisat ~/Documents/IntroToRNASeq/quantitation/RSEM.koRecon/WT5
 ```
 
 
-9. Differential Expression Analysis
------------------------------------
+## Step 6 - Differential Expression Analysis
 
 Read in gtf file
 ```{r,eval=FALSE}
 rm(list=ls())
-options(stringsAsFactors=FALSE)
 
 library(dplyr)
 
@@ -309,7 +329,7 @@ write.table(tpm,file="~/Documents/IntroToRNASeq/quantitation/isoformTPM.txt",sep
 
 Filter Transcripts Based on Read Counts
 
-```{r}
+```{r, eval=FALSE}
 rm(list=ls())
 options(stringsAsFactors = FALSE)
 
@@ -330,12 +350,12 @@ counts = round(filtered)
 ```
 
 Examine relationships between samples
-```{r}
+```{r, eval=FALSE}
 plot(hclust(as.dist(1-cor(counts))))
 ```
 
 Apply RUV using empirically derived negative controls
-```{r}
+```{r, eval=FALSE}
 
 ## create a data set with phenotype information
 colData = data.frame(sample = colnames(counts), genotype = as.factor(rep(c("KO","Het","WT"),each=3)))
@@ -357,21 +377,23 @@ ruvgSet <- RUVg(seqExpressionSet, empirical, k=3, drop=0)
 ```
 
 Relative Log Expression - Prior to RUV
-```{r}
+```{r, eval=FALSE}
 plotRLE(seqExpressionSet, outline=FALSE, ylim=c(-2, 2))
 ```
+
+
 Relative Log Expression - After RUV
-```{r}
+```{r, eval=FALSE}
 plotRLE(ruvgSet, outline=FALSE, ylim=c(-1, 1))
 ```
 
 Clustering of Samples After RUV
-```{r}
+```{r,eval=FALSE}
 plot(hclust(as.dist(1-cor(normCounts(ruvgSet)))))
 ```
 
 Differential Expression Analysis
-```{r}
+```{r,eval=FALSE}
 dds2 = DESeqDataSetFromMatrix(countData = counts,colData = pData(ruvgSet),design = ~ genotype + W_1 + W_2 + W_3)
 dds2 = DESeq(dds2,test="LRT",reduced= ~ W_1 + W_2 + W_3, fitType="local")
 genoEffects = results(dds2)
@@ -380,7 +402,7 @@ genoEffects = results(dds2)
 
 Merge differential expression results with annotation
 
-```{r}
+```{r, eval=FALSE}
 library(dplyr)
 
 # add annotation information
@@ -417,6 +439,8 @@ sigGenes = tested_genes %>%
   filter(padj<0.01 & grt100)
 ```
 
+```{r, eval=FALSE}
 Summary of significant transcripts:
 Number of transcripts: `r nrow(sigGenes)`
 Number of genes: `r length(unique(sigGenes$gene_id))`
+```

@@ -1,0 +1,12 @@
+/Users/saba/Documents/IntroToRNASeq/trimmed_reads/SRR12389348_1_trimmed.fastq 99.9204 53673431
+/Users/saba/Documents/IntroToRNASeq/trimmed_reads/SRR12389348_2_trimmed.fastq 99.7788 53673431
+/Users/saba/Documents/IntroToRNASeq/trimmed_reads/SRR12389349_1_trimmed.fastq 98.7262 52394612
+/Users/saba/Documents/IntroToRNASeq/trimmed_reads/SRR12389349_2_trimmed.fastq 98.511 52394612
+/Users/saba/Documents/IntroToRNASeq/trimmed_reads/SRR12389350_1_trimmed.fastq 99.7466 45637540
+/Users/saba/Documents/IntroToRNASeq/trimmed_reads/SRR12389350_2_trimmed.fastq 99.5638 45637540
+/Users/saba/Documents/IntroToRNASeq/trimmed_reads/SRR12389354_1_trimmed.fastq 99.4877 36297911
+/Users/saba/Documents/IntroToRNASeq/trimmed_reads/SRR12389354_2_trimmed.fastq 99.4388 36297911
+/Users/saba/Documents/IntroToRNASeq/trimmed_reads/SRR12389355_1_trimmed.fastq 99.67 59298117
+/Users/saba/Documents/IntroToRNASeq/trimmed_reads/SRR12389355_2_trimmed.fastq 99.5369 59298117
+/Users/saba/Documents/IntroToRNASeq/trimmed_reads/SRR12389356_1_trimmed.fastq 99.4951 60935811
+/Users/saba/Documents/IntroToRNASeq/trimmed_reads/SRR12389356_2_trimmed.fastq 99.3838 60935811
