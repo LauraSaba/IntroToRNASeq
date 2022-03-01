@@ -1,4 +1,4 @@
-/Users/saba/Documents/IntroToRNASeq/raw_reads/SRR12389348_1.fastq /Users/saba/Documents/IntroToRNASeq/raw_reads/SRR12389348_2.fastq /Users/saba/Documents/IntroToRNASeq/raw_reads/SRR12389348_1.fastq 101 53911568
+/Users/saba/Documents/IntroToRNASeq/raw_reads/SRR12389348_1.fastq 101 53911568
 /Users/saba/Documents/IntroToRNASeq/raw_reads/SRR12389348_2.fastq 101 53911568
 /Users/saba/Documents/IntroToRNASeq/raw_reads/SRR12389349_1.fastq 101 52675103
 /Users/saba/Documents/IntroToRNASeq/raw_reads/SRR12389349_2.fastq 101 52675103
