@@ -15,6 +15,7 @@ output:
 The goal of this program is to provide a general frame work for a typical bulk RNA-Seq analysis.
 
 ## Project Folder Set-Up
+
 It is easiest to follow along with this guide, if you set up a project folder that contains the following subfolders:  
 
 * raw_reads - should contain the original fastq files
@@ -189,7 +190,7 @@ Average Number of Paired End Reads Per Sample After Trimming: `r prettyNum(mean(
 
 ## Step 3 - Align trimmed reads to genome
 
-First, you need to download the most recent version of the genome from Ensembl, e.g., 
+First, you need to download the most recent version of the genome, e.g., from Ensembl 
 ftp://ftp.ensembl.org/pub/pub/release-105/fasta/rattus_norvegicus/dna/Rattus_norvegicus.mRatBN7.2.dna.toplevel.fa.gz
 
 Second, build the HISAT2 index for genome. 
@@ -226,7 +227,7 @@ samtools merge WT.bam SRR12389348.sorted.bam SRR12389349.sorted.bam SRR12389350.
 
 ### De novo transcriptome assembly with StringTie
 
-Download the GTF file of Ensembl transcripts to 'guide' the assembly.
+Download the GTF file of transcripts to 'guide' the assembly, e.g., from Ensembl
 http://ftp.ensembl.org/pub/release-105/gtf/rattus_norvegicus/Rattus_norvegicus.mRatBN7.2.105.gtf.gz   
 
 Create group-specific transcriptome assembly:
