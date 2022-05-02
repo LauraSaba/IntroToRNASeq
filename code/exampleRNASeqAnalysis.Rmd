@@ -216,13 +216,20 @@ Below is some example code:
 ```
 cd ~/Documents/IntroToRNASeq/aligned_reads/
 
-## sort each file separately
-samtools sort SRR12389348.bam -o SRR12389348.sorted
-samtools sort SRR12389349.bam -o SRR12389349.sorted
-samtools sort SRR12389350.bam -o SRR12389350.sorted
+samtools sort SRR12389348.bam -o SRR12389348.sorted.bam
+samtools sort SRR12389349.bam -o SRR12389349.sorted.bam
+samtools sort SRR12389350.bam -o SRR12389350.sorted.bam
 
 ## merge three files into one bam
-samtools merge WT.bam SRR12389348.sorted.bam SRR12389349.sorted.bam SRR12389350.sorted.bam 
+samtools merge WT.bam SRR12389348.sorted SRR12389349.sorted SRR12389350.sorted
+
+samtools sort SRR12389354.bam -o SRR12389354.sorted.bam
+samtools sort SRR12389355.bam -o SRR12389355.sorted.bam
+samtools sort SRR12389356.bam -o SRR12389356.sorted.bam
+
+## merge three files into one bam
+samtools merge KO.bam SRR12389354.sorted.bam SRR12389355.sorted.bam SRR12389356.sorted.bam 
+
 ```
 
 ### De novo transcriptome assembly with StringTie
@@ -230,33 +237,40 @@ samtools merge WT.bam SRR12389348.sorted.bam SRR12389349.sorted.bam SRR12389350.
 Download the GTF file of transcripts to 'guide' the assembly, e.g., from Ensembl
 http://ftp.ensembl.org/pub/release-105/gtf/rattus_norvegicus/Rattus_norvegicus.mRatBN7.2.105.gtf.gz   
 
-Create group-specific transcriptome assembly:
-
-**LMS will update**
+Create group-specific transcriptome assembly, e.g.:
 
 ```
-stringtie /data/hi-seq/LRAP.KO/alignedReads/HISAT2/KO.naive.bam -p 8 -o /data/home/sabal/lncRNA.KO/RNA-Seq/reconstruction/lncKO_KO_Recon.gtf -G ~/Documents/index/Rattus_norvegicus.Rnor_6.0.87.gtf 
+stringtie --rf ~/Documents/IntroToRNASeq/aligned_reads/KO.bam -p 8 \
+  -o ~/Documents/IntroToRNASeq/reconstruction/KO_Recon_v2.gtf \
+  -G ~/Documents/IntroToRNASeq/index/Rattus_norvegicus.mRatBN7.2.105.gtf
 ```
 
 Repeat this step for all groups.
 
 Merge the group-specific transcriptomes:
 
-**LMS will update**
-
 ```
-stringtie --merge -p 8 -o lncKO_merged_Recon.gtf mergeList.txt
+stringtie --merge -p 8 \
+  -o ~/Documents/IntroToRNASeq/reconstruction/merged_Recon.gtf \
+  ~/Documents/IntroToRNASeq/reconstruction/mergeList.txt
 ```
 
 Compare the reconstructed transcriptome to the Ensembl transcriptome
 
-**LMS will update**
-
 ```
-gffcompare -r ~/Documents/index/Rattus_norvegicus.Rnor_6.0.87.gtf -G -o /data/home/sabal/lncRNA.KO/RNA-Seq/reconstruction/lncKO_merged_wEnsembl /data/home/sabal/lncRNA.KO/RNA-Seq/reconstruction/lncKO_KO_Recon.gtf
+gffcompare -G -r ~/Documents/IntroToRNASeq/index/Rattus_norvegicus.mRatBN7.2.105.gtf \
+  -o ~/Documents/IntroToRNASeq/reconstruction/merged_Recon_wEnsembl \
+  ~/Documents/IntroToRNASeq/reconstruction/merged_Recon.gtf
 ```
 
-## Step 5 - Quantitate Merged De Novo Transcriptome Assembly
+## Step 5 - Quantitate Merged De Novo Transcriptome Assembly 
+
+
+Adjust transcripts without strand information in the reconstructed GTF
+
+RSEM doesn't take transcripts that don't have a strand designated. 
+
+
 
 
 Prepare RSEM reference using new GTF file and genome sequence
@@ -264,7 +278,10 @@ Prepare RSEM reference using new GTF file and genome sequence
 **LMS will update**
 
 ```
-rsem-prepare-reference --gtf /data/home/sabal/lncRNA.KO/RNA-Seq/reconstruction/lncKO_merged_Recon.gtf --bowtie2 ~/Documents/index/BNLx.rn6.spikes.fa /data/home/sabal/lncRNA.KO/RNA-Seq/reconstruction/lncKO_merged_Recon.hisat 
+rsem-prepare-reference --bowtie2 \
+  --gtf ~/Documents/IntroToRNASeq/reconstruction/merged_Recon_wEnsembl.annotated.gtf \
+  ~/Documents/IntroToRNASeq/index/Rattus_norvegicus.mRatBN7.2.dna.toplevel.fa \
+  /data/home/sabal/lncRNA.KO/RNA-Seq/reconstruction/merged_Recon.hisat 
 ```
 
 Prepare RSEM reference using Ensembl GTF file and genome sequence
